@@ -1,0 +1,34 @@
+{
+  "task": "Hermes reinstall",
+  "percent": 62,
+  "stepIndex": 3,
+  "stepTotal": 5,
+  "currentStep": "Install dependencies",
+  "steps": [
+    { "title": "remove stale update lock", "status": "done",    "percent": 20 },
+    { "title": "run full uninstall",       "status": "done",    "percent": 40 },
+    { "title": "delete leftover tree",     "status": "done",    "percent": 60 },
+    { "title": "reinstall Hermes",         "status": "active",  "percent": 62 },
+    { "title": "verify hermes --version",  "status": "pending", "percent": null }
+  ],
+  "details": [
+    { "k": "install dir", "v": "C:\\Users\\music\\AppData\\Local\\hermes" },
+    { "k": "installer",   "v": "install.ps1 -NonInteractive -SkipSetup -SkipBrowser -SkipComputerUse" },
+    { "k": "checkout",    "v": "NousResearch/hermes-agent @ main" },
+    { "k": "tools",       "v": "7 installed" },
+    { "k": "staging",     "v": "none — git clone finished" },
+    { "k": "pid",         "v": "4604 (node)" },
+    { "k": "started",     "v": "16:57" },
+    { "k": "launcher",    "v": "not published yet" }
+  ],
+  "files": [
+    { "name": "progress.json", "path": "C:\\Users\\music\\3D Objects\\Agent 0.1\\progress-widget\\progress.json" },
+    { "name": "index.html",    "path": "C:\\Users\\music\\3D Objects\\Agent 0.1\\progress-widget\\index.html" },
+    { "name": "server.mjs",    "path": "C:\\Users\\music\\3D Objects\\Agent 0.1\\progress-widget\\server.mjs" },
+    { "name": "previews.html", "path": "C:\\Users\\music\\3D Objects\\Agent 0.1\\progress-mockups\\previews.html" },
+    { "name": "fix-hermes.ps1","path": "C:\\Users\\music\\3D Objects\\Agent 0.1\\fix-hermes.ps1" }
+  ],
+  "elapsed": "18m",
+  "owner": "subagent e9515db6",
+  "updatedAt": "2026-10-10T15:02:00Z"
+}
