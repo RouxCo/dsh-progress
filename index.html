@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DSH Task Progress</title>
+<style>
+  :root{
+    --bg:#141518; --card:#232428; --border:#2e3036;
+    --text:#e6e7ea; --muted:#8b8f98; --dim:#555963;
+    --accent:#4c8dff; --ok:#3fb950; --warn:#d29922;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:10px; -webkit-user-select:none; user-select:none;
+  }
+  .card{
+    width:100%; max-width:440px;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:8px; padding:12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+
+  details.head{width:100%}
+  details.head > summary{
+    list-style:none; cursor:pointer;
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:13px; font-weight:600; letter-spacing:.2px; text-transform:uppercase;
+    gap:8px; border-radius:4px;
+  }
+  details.head > summary::-webkit-details-marker{display:none}
+  details.head > summary::marker{content:""}
+  details.head > summary:hover .txt{color:#fff}
+  .title{display:flex; align-items:baseline; gap:6px; min-width:0}
+  .chev{font-size:9px; color:var(--dim); flex:0 0 auto;
+        transition:transform .18s ease; transform-origin:50% 45%}
+  details.head[open] .chev{transform:rotate(90deg)}
+  .title .txt{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pct{font-size:13px; font-weight:700; color:var(--accent);
+       font-variant-numeric:tabular-nums; flex:0 0 auto}
+
+  .detailbox{
+    margin-top:9px; padding:9px 10px;
+    background:#1c1d21; border:1px solid var(--border); border-radius:6px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .sect{font-size:10px; color:var(--dim); letter-spacing:.6px;
+        text-transform:uppercase; margin-top:3px}
+  .sect:first-child{margin-top:0}
+  .drow{display:flex; gap:10px; font-size:11.5px; line-height:1.35}
+  .drow .k{color:var(--dim); flex:0 0 84px}
+  .drow .v{color:var(--text); flex:1; word-break:break-all;
+           font-family:Consolas,"Cascadia Mono",monospace; font-size:11px}
+  .frow{display:flex; gap:8px; font-size:11px; align-items:baseline}
+  .frow .n{color:var(--accent); flex:0 0 96px;
+           overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .frow .p{color:var(--muted); flex:1; overflow-wrap:anywhere;
+           font-family:Consolas,"Cascadia Mono",monospace; font-size:10.5px;
+           line-height:1.3}
+
+  .bar{height:4px; background:#2b2d33; border-radius:2px; overflow:hidden}
+  .bar > i{display:block; height:100%; background:var(--accent);
+           border-radius:2px; transition:width .4s cubic-bezier(.4,0,.2,1)}
+  .cur{font-size:11.5px; color:var(--muted)}
+  .steps{display:flex; flex-direction:column; gap:8px; margin-top:1px}
+  .row{display:flex; align-items:baseline; gap:8px; font-size:12px; min-height:16px}
+  .row .mark{width:12px; flex:0 0 12px; text-align:center; font-size:11px}
+  .row .t{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row .v{font-size:11.5px; font-variant-numeric:tabular-nums;
+          flex:0 0 auto; min-width:34px; text-align:right}
+  .row.done .t,.row.done .v{color:var(--muted)}
+  .row.done .mark{color:var(--ok)}
+  .row.active{font-weight:600}
+  .row.active .mark,.row.active .v{color:var(--accent)}
+  .row.pending{color:var(--dim)}
+  .row.pending .v{color:var(--dim)}
+  .foot{font-size:11px; color:var(--dim); margin-top:1px;
+        display:flex; justify-content:space-between; gap:8px}
+  .status{font-size:10px; color:var(--dim); display:flex; gap:6px; align-items:center}
+  .dot{width:5px; height:5px; border-radius:50%; background:var(--ok); flex:0 0 auto}
+  .dot.stale{background:var(--warn)}
+  .dot.err{background:#e5534b}
+  .idle{font-size:12px; color:var(--dim); text-align:center; padding:16px 0}
+</style>
+</head>
+<body>
+  <div class="card" id="card"></div>
+
+<script>
+/* live source: public gist, read-only, no secrets in this page */
+const GIST_RAW = "https://gist.githubusercontent.com/RouxCo/f42610c9da7317c21bf0af535ce77a18/raw/progress.json";
+const POLL_MS  = 5000;   // 5s: polite to GitHub's CDN
+const openState = { head: false };
+
+function el(tag, cls, text){
+  const n = document.createElement(tag);
+  if(cls) n.className = cls;
+  if(text != null) n.textContent = text;
+  return n;
+}
+
+function render(s, meta){
+  const card = document.getElementById("card");
+  card.textContent = "";
+
+  const det = document.createElement("details");
+  det.className = "head";
+  det.open = openState.head;
+  det.addEventListener("toggle", () => { openState.head = det.open; });
+
+  const sum = document.createElement("summary");
+  const title = el("span","title");
+  title.appendChild(el("span","chev","\u25B6"));
+  title.appendChild(el("span","txt", s.task || "task"));
+  sum.appendChild(title);
+  sum.appendChild(el("span","pct", (s.percent == null ? 0 : s.percent) + "%"));
+  det.appendChild(sum);
+
+  const details = s.details || [];
+  const files = s.files || [];
+  if(details.length || files.length){
+    const box = el("div","detailbox");
+    if(details.length){
+      box.appendChild(el("div","sect","details"));
+      details.forEach(d => {
+        const row = el("div","drow");
+        row.appendChild(el("span","k", d.k || ""));
+        row.appendChild(el("span","v", d.v == null ? "\u2014" : String(d.v)));
+        box.appendChild(row);
+      });
+    }
+    if(files.length){
+      box.appendChild(el("div","sect","files"));
+      files.forEach(f => {
+        const row = el("div","frow");
+        row.appendChild(el("span","n", f.name || ""));
+        row.appendChild(el("span","p", f.path || ""));
+        box.appendChild(row);
+      });
+    }
+    det.appendChild(box);
+  }
+  card.appendChild(det);
+
+  const bar = el("div","bar");
+  const fill = el("i");
+  fill.style.width = (s.percent == null ? 0 : s.percent) + "%";
+  bar.appendChild(fill);
+  card.appendChild(bar);
+
+  card.appendChild(el("div","cur",
+    "Step " + (s.stepIndex == null ? "?" : s.stepIndex) +
+    " of " + (s.stepTotal == null ? "?" : s.stepTotal) +
+    (s.currentStep ? " \u00B7 " + s.currentStep : "")));
+
+  const steps = el("div","steps");
+  (s.steps || []).forEach(st => {
+    const status = st.status || "pending";
+    const row = el("div","row " + status);
+    row.appendChild(el("span","mark",
+      status === "done" ? "\u2713" : status === "active" ? "\u25B8" : "\u25CB"));
+    row.appendChild(el("span","t", st.title || ""));
+    row.appendChild(el("span","v", st.percent == null ? "\u2014" : st.percent + "%"));
+    steps.appendChild(row);
+  });
+  card.appendChild(steps);
+
+  const foot = el("div","foot");
+  foot.appendChild(el("span",null, (s.elapsed ? s.elapsed + " elapsed" : "") +
+                                   (s.owner ? " \u00B7 " + s.owner : "")));
+  const st = el("span","status");
+  const dot = el("span","dot " + (meta && meta.kind ? meta.kind : ""));
+  st.appendChild(dot);
+  st.appendChild(el("span",null, meta && meta.text ? meta.text : "live"));
+  foot.appendChild(st);
+  card.appendChild(foot);
+
+  document.title = (s.task || "task") + " \u2014 " + (s.percent == null ? 0 : s.percent) + "%";
+}
+
+let lastGood = null;
+let lastFetch = 0;
+
+async function tick(){
+  try{
+    const r = await fetch(GIST_RAW + "?t=" + Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const s = await r.json();
+    lastGood = s;
+    lastFetch = Date.now();
+    render(s, {kind:"", text: "live \u00B7 " + new Date().toLocaleTimeString()});
+  }catch(e){
+    if(lastGood){
+      render(lastGood, {kind:"stale", text: "stale \u00B7 " + new Date().toLocaleTimeString()});
+    }else{
+      const card = document.getElementById("card");
+      card.textContent = "";
+      card.appendChild(el("div","idle","cannot read gist \u2014 " + e.message));
+    }
+  }
+}
+
+tick();
+setInterval(tick, POLL_MS);
+</script>
+</body>
+</html>
