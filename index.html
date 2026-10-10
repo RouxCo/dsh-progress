@@ -105,11 +105,18 @@ function el(tag, cls, text){
 
 function render(s, meta){
   const card = document.getElementById("card");
+
+  /* remember what the user actually had open, straight from the live DOM,
+     so a 5s re-render can never collapse it */
+  const liveDet = card.querySelector("details.head");
+  if(liveDet) openState.head = liveDet.open;
+
   card.textContent = "";
 
   const det = document.createElement("details");
   det.className = "head";
-  det.open = openState.head;
+  det.id = "headbox";
+  det.open = openState.head;          /* set BEFORE insertion: avoids transition races */
   det.addEventListener("toggle", () => { openState.head = det.open; });
 
   const sum = document.createElement("summary");
